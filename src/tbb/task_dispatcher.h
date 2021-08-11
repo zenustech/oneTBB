@@ -443,14 +443,14 @@ inline d1::task* task_dispatcher::get_critical_task(d1::task* t, execution_data_
 #endif
 
 inline d1::task* task_dispatcher::get_mailbox_task(mail_inbox& my_inbox, execution_data_ext& ed, isolation_type isolation) {
-    while (task_proxy* const tp = my_inbox.pop(isolation)) {
-        if (d1::task* result = tp->extract_task<task_proxy::mailbox_bit>()) {
+    while (d1::task* tp = my_inbox.pop(isolation)) {
+        if (tp) {
             ed.original_slot = (unsigned short)(-2);
             ed.affinity_slot = ed.task_disp->m_thread_data->my_arena_index;
-            return result;
+            return tp;
         }
         // We have exclusive access to the proxy, and can destroy it.
-        tp->allocator.delete_object(tp, ed);
+        // tp->allocator.delete_object(tp, ed);
     }
     return NULL;
 }

@@ -60,10 +60,16 @@ concept parallel_for_function = requires( const std::remove_reference_t<Function
 #endif // __TBB_CPP20_CONCEPTS_PRESENT
 namespace d1 {
 
+// TO REMOVE
+static std::atomic_int i_task{};
+
 //! Task type used in parallel_for
 /** @ingroup algorithms */
 template<typename Range, typename Body, typename Partitioner>
 struct start_for : public task {
+    std::atomic_int my_state;
+    int task_index; // TO REMOVE
+
     Range my_range;
     const Body my_body;
     node* my_parent;
@@ -77,26 +83,30 @@ struct start_for : public task {
 
     //! Constructor for root task.
     start_for( const Range& range, const Body& body, Partitioner& partitioner, small_object_allocator& alloc ) :
+        my_state(-1),
         my_range(range),
         my_body(body),
         my_partition(partitioner),
-        my_allocator(alloc) {}
+        my_allocator(alloc) {task_index = i_task++;}
     //! Splitting constructor used to generate children.
     /** parent_ becomes left child.  Newly constructed object is right child. */
     start_for( start_for& parent_, typename Partitioner::split_type& split_obj, small_object_allocator& alloc ) :
+        my_state(3),
         my_range(parent_.my_range, get_range_split_object<Range>(split_obj)),
         my_body(parent_.my_body),
         my_partition(parent_.my_partition, split_obj),
-        my_allocator(alloc) {}
+        my_allocator(alloc) {task_index = i_task++;}
     //! Construct right child from the given range as response to the demand.
     /** parent_ remains left child.  Newly constructed object is right child. */
     start_for( start_for& parent_, const Range& r, depth_t d, small_object_allocator& alloc ) :
+        my_state(3),
         my_range(r),
         my_body(parent_.my_body),
         my_partition(parent_.my_partition, split()),
         my_allocator(alloc)
     {
         my_partition.align_depth( d );
+        task_index = i_task++;
     }
     static void run(const Range& range, const Body& body, Partitioner& partitioner) {
         task_group_context context(PARALLEL_FOR);
@@ -165,12 +175,19 @@ void start_for<Range, Body, Partitioner>::finalize(const execution_data& ed) {
 //! execute task for parallel_for
 template<typename Range, typename Body, typename Partitioner>
 task* start_for<Range, Body, Partitioner>::execute(execution_data& ed) {
-    if (!is_same_affinity(ed)) {
-        my_partition.note_affinity(execution_slot(ed));
+    auto snapshot = --my_state;
+    if (snapshot < 0 || snapshot == 2) {
+        if (!is_same_affinity(ed)) {
+            my_partition.note_affinity(execution_slot(ed));
+        }
+        my_partition.check_being_stolen(*this, ed);
+        my_partition.execute(*this, my_range, ed);
+        if (snapshot < 0 || --my_state == 0)
+            finalize(ed);
+    } else {
+        if (snapshot == 0)
+            finalize(ed);
     }
-    my_partition.check_being_stolen(*this, ed);
-    my_partition.execute(*this, my_range, ed);
-    finalize(ed);
     return nullptr;
 }
 

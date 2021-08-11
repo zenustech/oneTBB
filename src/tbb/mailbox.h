@@ -95,7 +95,7 @@ struct task_proxy : public d1::task {
 //! Internal representation of mail_outbox, without padding.
 class unpadded_mail_outbox {
 protected:
-    typedef std::atomic<task_proxy*> atomic_proxy_ptr;
+    typedef std::atomic<d1::task*> atomic_proxy_ptr;
 
     //! Pointer to first task_proxy in mailbox, or nullptr if box is empty.
     atomic_proxy_ptr my_first;
@@ -112,8 +112,8 @@ protected:
 /** Padded to occupy a cache line. */
 class mail_outbox : padded<unpadded_mail_outbox> {
 
-    task_proxy* internal_pop( isolation_type isolation ) {
-        task_proxy* curr = my_first.load(std::memory_order_acquire);
+    d1::task* internal_pop( isolation_type isolation ) {
+        d1::task* curr = my_first.load(std::memory_order_acquire);
         if ( !curr )
             return nullptr;
         atomic_proxy_ptr* prev_ptr = &my_first;
@@ -128,7 +128,7 @@ class mail_outbox : padded<unpadded_mail_outbox> {
         }
         // There is a first item in the mailbox.  See if there is a second.
         // The next_in_mailbox should be read with acquire to guarantee (*second) consistency.
-        if ( task_proxy* second = curr->next_in_mailbox.load(std::memory_order_acquire) ) {
+        if ( d1::task* second = curr->next_in_mailbox.load(std::memory_order_acquire) ) {
             // There are at least two items, so first item can be popped easily.
             prev_ptr->store(second, std::memory_order_relaxed);
         } else {
@@ -156,7 +156,7 @@ public:
 
     //! Push task_proxy onto the mailbox queue of another thread.
     /** Implementation is wait-free. */
-    void push( task_proxy* t ) {
+    void push( d1::task* t ) {
         assert_pointer_valid(t);
         t->next_in_mailbox.store(nullptr, std::memory_order_relaxed);
         atomic_proxy_ptr* const link = my_last.exchange(&t->next_in_mailbox);
@@ -188,9 +188,9 @@ public:
     //! Drain the mailbox
     void drain() {
         // No fences here because other threads have already quit.
-        for( ; task_proxy* t = my_first; ) {
+        for( ; d1::task* t = my_first; ) {
             my_first.store(t->next_in_mailbox, std::memory_order_relaxed);
-            t->allocator.delete_object(t);
+            // t->allocator.delete_object(t);
         }
     }
 
@@ -218,7 +218,7 @@ public:
         my_putter = nullptr;
     }
     //! Get next piece of mail, or nullptr if mailbox is empty.
-    task_proxy* pop( isolation_type isolation ) {
+    d1::task* pop( isolation_type isolation ) {
         return my_putter->internal_pop( isolation );
     }
     //! Return true if mailbox is empty

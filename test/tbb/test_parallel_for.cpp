@@ -459,6 +459,24 @@ TEST_CASE("parallel_for constraints") {
 }
 #endif // __TBB_CPP20_CONCEPTS_PRESENT
 
+TEST_CASE("dummy test 1") {
+    constexpr int N = 128;
+    printf("Concurrency: %d\n", tbb::this_task_arena::max_concurrency());
+    auto f = [](tbb::blocked_range<int>& r) {
+        printf("%d %d %lu\n", r.begin(), r.end(), r.size());
+    };
+    tbb::parallel_for(tbb::blocked_range<int>(0, N), f, tbb::static_partitioner{});
+}
+
+TEST_CASE("dummy test 2") {
+    std::atomic_int sum{};
+    tbb::parallel_for(tbb::blocked_range<int>(0, 100000), [&](tbb::blocked_range<int>& r) {
+        for (int i = r.begin(); i < r.end(); ++i)
+            ++sum;
+    }, tbb::static_partitioner{});
+    CHECK(sum == 100000);
+}
+
 #if _MSC_VER
 #pragma warning (pop)
 #endif

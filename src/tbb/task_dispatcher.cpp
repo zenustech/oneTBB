@@ -53,18 +53,19 @@ void __TBB_EXPORTED_FUNC spawn(d1::task& t, d1::task_group_context& ctx, d1::slo
 
     if ( id != d1::no_slot && id != tls->my_arena_index && id < a->my_num_slots) {
         // Allocate proxy task
-        d1::small_object_allocator alloc{};
-        auto proxy = alloc.new_object<task_proxy>(static_cast<d1::execution_data&>(ed));
+        // d1::small_object_allocator alloc{};
+        // auto proxy = alloc.new_object<task_proxy>(static_cast<d1::execution_data&>(ed));
+        auto proxy = &t;
         // Mark as a proxy
         task_accessor::set_proxy_trait(*proxy);
         // Mark isolation for the proxy task
         task_accessor::isolation(*proxy) = ed.isolation;
         // Deallocation hint (tls) from the task allocator
-        proxy->allocator = alloc;
+        // proxy->allocator = alloc;
         proxy->slot = id;
         proxy->outbox = &a->mailbox(id);
         // Mark proxy as present in both locations (sender's task pool and destination mailbox)
-        proxy->task_and_tag = intptr_t(&t) | task_proxy::location_mask;
+        proxy->affinity_tag = task_proxy::location_mask;
         // Mail the proxy - after this point t may be destroyed by another thread at any moment.
         proxy->outbox->push(proxy);
         // Spawn proxy to the local task pool

@@ -63,6 +63,7 @@ TBB_EXPORT void __TBB_EXPORTED_FUNC resume(suspend_point_type* tag);
 TBB_EXPORT suspend_point_type* __TBB_EXPORTED_FUNC current_suspend_point();
 TBB_EXPORT void __TBB_EXPORTED_FUNC notify_waiters(std::uintptr_t wait_ctx_addr);
 
+class mail_outbox;
 class thread_data;
 class task_dispatcher;
 class external_waiter;
@@ -219,8 +220,12 @@ public:
     virtual task* execute(execution_data&) = 0;
     virtual task* cancel(execution_data&) = 0;
 
+    slot_id slot;
+    slot_id affinity_tag;
+    r1::mail_outbox* outbox;
+    std::atomic<task*> next_in_mailbox;
 private:
-    std::uint64_t m_reserved[6]{};
+    std::uint64_t m_reserved[3]{};
     friend struct r1::task_accessor;
 };
 static_assert(sizeof(task) == task_alignment, "task size is broken");

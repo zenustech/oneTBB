@@ -43,14 +43,14 @@ d1::task* arena_slot::get_task_impl(size_t T, execution_data_ext& ed, bool& task
         return nullptr;
     }
 
-    task_proxy& tp = static_cast<task_proxy&>(*result);
-    d1::slot_id aff_id = tp.slot;
-    if ( d1::task *t = tp.extract_task<task_proxy::pool_bit>() ) {
+    // task_proxy& tp = static_cast<task_proxy&>(*result);
+    d1::slot_id aff_id = result->slot;
+    if ( result ) {
         ed.affinity_slot = aff_id;
-        return t;
+        return result;
     }
     // Proxy was empty, so it's our responsibility to free it
-    tp.allocator.delete_object(&tp, ed);
+    // result->allocator.delete_object(&result, ed);
 
     if ( tasks_omitted ) {
         task_pool_ptr[T] = nullptr;
@@ -173,9 +173,9 @@ d1::task* arena_slot::steal_task(arena& a, isolation_type isolation, std::size_t
                 if (!task_accessor::is_proxy_task(*result)) {
                     break;
                 }
-                task_proxy& tp = *static_cast<task_proxy*>(result);
+                // task_proxy& tp = *static_cast<task_proxy*>(result);
                 // If mailed task is likely to be grabbed by its destination thread, skip it.
-                if (!task_proxy::is_shared(tp.task_and_tag) || !tp.outbox->recipient_is_idle() || a.mailbox(slot_index).recipient_is_idle()) {
+                if (!task_proxy::is_shared(std::intptr_t(result) | result->affinity_tag) || !result->outbox->recipient_is_idle() || a.mailbox(slot_index).recipient_is_idle()) {
                     break;
                 }
             }

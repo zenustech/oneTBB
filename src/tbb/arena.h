@@ -572,12 +572,12 @@ inline d1::task* arena::steal_task(unsigned arena_index, FastRandom& frnd, execu
         return nullptr;
     }
     if (task_accessor::is_proxy_task(*t)) {
-        task_proxy &tp = *(task_proxy*)t;
-        d1::slot_id slot = tp.slot;
-        t = tp.extract_task<task_proxy::pool_bit>();
+        // task_proxy &tp = *(task_proxy*)t;
+        d1::slot_id slot = t->slot;
+        // t = tp.extract_task<task_proxy::pool_bit>();
         if (!t) {
             // Proxy was empty, so it's our responsibility to free it
-            tp.allocator.delete_object(&tp, ed);
+            // tp.allocator.delete_object(&tp, ed);
             return nullptr;
         }
         // Note affinity is called for any stolen task (proxy or general)
