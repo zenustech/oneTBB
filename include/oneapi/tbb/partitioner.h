@@ -108,7 +108,7 @@ class affinity_partitioner_base: no_copy {
     }
 };
 
-template<typename Range, typename Body, typename Partitioner> struct start_for;
+template<typename Range, typename Body, typename Partitioner, int RefSize> struct start_for;
 template<typename Range, typename Body, typename Partitioner> struct start_scan;
 template<typename Range, typename Body, typename Partitioner> struct start_reduce;
 template<typename Range, typename Body, typename Partitioner> struct start_deterministic_reduce;
@@ -584,7 +584,7 @@ class simple_partitioner {
 public:
     simple_partitioner() {}
 private:
-    template<typename Range, typename Body, typename Partitioner> friend struct start_for;
+    template<typename Range, typename Body, typename Partitioner, int RefSize> friend struct start_for;
     template<typename Range, typename Body, typename Partitioner> friend struct start_reduce;
     template<typename Range, typename Body, typename Partitioner> friend struct start_deterministic_reduce;
     template<typename Range, typename Body, typename Partitioner> friend struct start_scan;
@@ -611,7 +611,7 @@ public:
     auto_partitioner() {}
 
 private:
-    template<typename Range, typename Body, typename Partitioner> friend struct start_for;
+    template<typename Range, typename Body, typename Partitioner, int RefSize> friend struct start_for;
     template<typename Range, typename Body, typename Partitioner> friend struct start_reduce;
     template<typename Range, typename Body, typename Partitioner> friend struct start_deterministic_reduce;
     template<typename Range, typename Body, typename Partitioner> friend struct start_scan;
@@ -643,7 +643,7 @@ class static_partitioner {
 public:
     static_partitioner() {}
 private:
-    template<typename Range, typename Body, typename Partitioner> friend struct start_for;
+    template<typename Range, typename Body, typename Partitioner, int RefSize> friend struct start_for;
     template<typename Range, typename Body, typename Partitioner> friend struct start_reduce;
     template<typename Range, typename Body, typename Partitioner> friend struct start_deterministic_reduce;
     template<typename Range, typename Body, typename Partitioner> friend struct start_scan;
@@ -659,7 +659,7 @@ public:
     affinity_partitioner() {}
 
 private:
-    template<typename Range, typename Body, typename Partitioner> friend struct start_for;
+    template<typename Range, typename Body, typename Partitioner, int RefSize> friend struct start_for;
     template<typename Range, typename Body, typename Partitioner> friend struct start_reduce;
     template<typename Range, typename Body, typename Partitioner> friend struct start_deterministic_reduce;
     template<typename Range, typename Body, typename Partitioner> friend struct start_scan;

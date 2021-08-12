@@ -65,7 +65,7 @@ static std::atomic_int i_task{};
 
 //! Task type used in parallel_for
 /** @ingroup algorithms */
-template<typename Range, typename Body, typename Partitioner>
+template<typename Range, typename Body, typename Partitioner, int RefSize = -1>
 struct start_for : public task {
     std::atomic_int my_state;
     int task_index; // TO REMOVE
@@ -91,7 +91,7 @@ struct start_for : public task {
     //! Splitting constructor used to generate children.
     /** parent_ becomes left child.  Newly constructed object is right child. */
     start_for( start_for& parent_, typename Partitioner::split_type& split_obj, small_object_allocator& alloc ) :
-        my_state(3),
+        my_state(RefSize),
         my_range(parent_.my_range, get_range_split_object<Range>(split_obj)),
         my_body(parent_.my_body),
         my_partition(parent_.my_partition, split_obj),
@@ -99,7 +99,7 @@ struct start_for : public task {
     //! Construct right child from the given range as response to the demand.
     /** parent_ remains left child.  Newly constructed object is right child. */
     start_for( start_for& parent_, const Range& r, depth_t d, small_object_allocator& alloc ) :
-        my_state(3),
+        my_state(RefSize),
         my_range(r),
         my_body(parent_.my_body),
         my_partition(parent_.my_partition, split()),
@@ -158,8 +158,8 @@ private:
 };
 
 //! fold the tree and deallocate the task
-template<typename Range, typename Body, typename Partitioner>
-void start_for<Range, Body, Partitioner>::finalize(const execution_data& ed) {
+template<typename Range, typename Body, typename Partitioner, int RefSize>
+void start_for<Range, Body, Partitioner, RefSize>::finalize(const execution_data& ed) {
     // Get the current parent and allocator an object destruction
     node* parent = my_parent;
     auto allocator = my_allocator;
@@ -173,8 +173,9 @@ void start_for<Range, Body, Partitioner>::finalize(const execution_data& ed) {
 }
 
 //! execute task for parallel_for
-template<typename Range, typename Body, typename Partitioner>
-task* start_for<Range, Body, Partitioner>::execute(execution_data& ed) {
+template<typename Range, typename Body, typename Partitioner, int RefSize>
+task* start_for<Range, Body, Partitioner, RefSize>::execute(execution_data& ed) {
+    printf("TASK #%d: Enter %d\n", task_index, my_state.load());
     auto snapshot = --my_state;
     if (snapshot < 0 || snapshot == 2) {
         if (!is_same_affinity(ed)) {
@@ -192,8 +193,8 @@ task* start_for<Range, Body, Partitioner>::execute(execution_data& ed) {
 }
 
 //! cancel task for parallel_for
-template<typename Range, typename Body, typename Partitioner>
-task* start_for<Range, Body, Partitioner>::cancel(execution_data& ed) {
+template<typename Range, typename Body, typename Partitioner, int RefSize>
+task* start_for<Range, Body, Partitioner, RefSize>::cancel(execution_data& ed) {
     finalize(ed);
     return nullptr;
 }
@@ -269,7 +270,7 @@ void parallel_for( const Range& range, const Body& body, const auto_partitioner&
 template<typename Range, typename Body>
     __TBB_requires(tbb_range<Range> && parallel_for_body<Body, Range>)
 void parallel_for( const Range& range, const Body& body, const static_partitioner& partitioner ) {
-    start_for<Range,Body,const static_partitioner>::run(range,body,partitioner);
+    start_for<Range,Body,const static_partitioner, 3>::run(range,body,partitioner);
 }
 
 //! Parallel iteration over range with affinity_partitioner.
@@ -309,7 +310,7 @@ void parallel_for( const Range& range, const Body& body, const auto_partitioner&
 template<typename Range, typename Body>
     __TBB_requires(tbb_range<Range> && parallel_for_body<Body, Range>)
 void parallel_for( const Range& range, const Body& body, const static_partitioner& partitioner, task_group_context& context ) {
-    start_for<Range,Body,const static_partitioner>::run(range, body, partitioner, context);
+    start_for<Range,Body,const static_partitioner, 3>::run(range, body, partitioner, context);
 }
 
 //! Parallel iteration over range with affinity_partitioner and user-supplied context.
