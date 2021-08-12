@@ -175,7 +175,6 @@ void start_for<Range, Body, Partitioner, RefSize>::finalize(const execution_data
 //! execute task for parallel_for
 template<typename Range, typename Body, typename Partitioner, int RefSize>
 task* start_for<Range, Body, Partitioner, RefSize>::execute(execution_data& ed) {
-    printf("TASK #%d: Enter %d\n", task_index, my_state.load());
     auto snapshot = --my_state;
     if (snapshot < 0 || snapshot == 2) {
         if (!is_same_affinity(ed)) {
@@ -183,11 +182,13 @@ task* start_for<Range, Body, Partitioner, RefSize>::execute(execution_data& ed) 
         }
         my_partition.check_being_stolen(*this, ed);
         my_partition.execute(*this, my_range, ed);
-        if (snapshot < 0 || --my_state == 0)
+        if (snapshot < 0 || --my_state == 0) {
             finalize(ed);
+        }
     } else {
-        if (snapshot == 0)
+        if (snapshot == 0) {
             finalize(ed);
+        }
     }
     return nullptr;
 }
@@ -195,6 +196,7 @@ task* start_for<Range, Body, Partitioner, RefSize>::execute(execution_data& ed) 
 //! cancel task for parallel_for
 template<typename Range, typename Body, typename Partitioner, int RefSize>
 task* start_for<Range, Body, Partitioner, RefSize>::cancel(execution_data& ed) {
+    // printf("TASK #%d: Enter %d\n", task_index, my_state.load());
     finalize(ed);
     return nullptr;
 }
